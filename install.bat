@@ -2,9 +2,10 @@
 :: CMDB Local Agent - Instalador
 :: Execute como Administrador
 
-setlocal
+setlocal EnableExtensions EnableDelayedExpansion
 set AGENT_DIR=%ProgramFiles%\CMDB-Agent
 set NODE_URL=https://nodejs.org/dist/v20.11.0/node-v20.11.0-x64.msi
+set CMDB_BASE_URL=__CMDB_BASE_URL__
 
 echo ============================================
 echo  CMDB Enterprise - Instalador do Agente
@@ -17,23 +18,48 @@ if %errorlevel% neq 0 (
     echo [!] Node.js nao encontrado.
     echo [*] Baixando Node.js...
     curl -L -o "%TEMP%\node_installer.msi" "%NODE_URL%"
+    if %errorlevel% neq 0 (
+      echo [ERRO] Falha ao baixar Node.js.
+      pause
+      exit /b 1
+    )
     msiexec /i "%TEMP%\node_installer.msi" /quiet /norestart
     echo [OK] Node.js instalado.
     echo [!] Reinicie o instalador apos o Node.js estar no PATH.
     pause
     exit /b 1
 )
-echo [OK] Node.js encontrado: 
+echo [OK] Node.js encontrado:
 node --version
 
 :: Cria pasta de instalacao
 if not exist "%AGENT_DIR%" mkdir "%AGENT_DIR%"
 
-:: Copia arquivos
-echo [*] Copiando arquivos para %AGENT_DIR%...
-copy /Y "%~dp0agent.js"      "%AGENT_DIR%\agent.js"      >nul
-copy /Y "%~dp0package.json"  "%AGENT_DIR%\package.json"  >nul
-echo [OK] Arquivos copiados.
+:: Baixa/copia arquivos do agente
+echo [*] Preparando arquivos do agente...
+if exist "%~dp0agent.js" (
+  copy /Y "%~dp0agent.js" "%AGENT_DIR%\agent.js" >nul
+) else (
+  curl -fsSL "%CMDB_BASE_URL%/agent/agent.js" -o "%AGENT_DIR%\agent.js"
+)
+if %errorlevel% neq 0 (
+  echo [ERRO] Falha ao obter agent.js
+  pause
+  exit /b 1
+)
+
+if exist "%~dp0package.json" (
+  copy /Y "%~dp0package.json" "%AGENT_DIR%\package.json" >nul
+) else (
+  curl -fsSL "%CMDB_BASE_URL%/agent/package.json" -o "%AGENT_DIR%\package.json"
+)
+if %errorlevel% neq 0 (
+  echo [ERRO] Falha ao obter package.json
+  pause
+  exit /b 1
+)
+
+echo [OK] Arquivos prontos.
 
 :: Cria script VBS para rodar sem janela visivel
 echo [*] Criando launcher...
@@ -57,7 +83,7 @@ start "" wscript.exe "%AGENT_DIR%\run-agent.vbs"
 timeout /t 2 /nobreak >nul
 
 :: Verifica se subiu
-curl -s http://127.0.0.1:27420/health >nul 2>&1
+curl -fsS http://127.0.0.1:27420/health >nul 2>&1
 if %errorlevel% equ 0 (
     echo [OK] Agente rodando em http://127.0.0.1:27420
 ) else (

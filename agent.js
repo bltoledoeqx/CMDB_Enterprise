@@ -60,30 +60,45 @@ function openRDP({ host, port, user, domain, gateway, gatewayUser, gatewayPass, 
 }
 
 // ════ SSH ═════════════════════════════════════════════════════════════════
-function openSSH({ host, port, user, password, sshJump, sshJumpUser }) {
+function parseEndpoint(raw, fallbackPort) {
+  const value = String(raw || '').trim();
+  if (!value) return { host: '', port: fallbackPort };
+  const m = value.match(/^\[?([^\]]+)\]?(?::(\d+))?$/);
+  if (!m) return { host: value, port: fallbackPort };
+  return { host: m[1], port: m[2] ? Number(m[2]) : fallbackPort };
+}
+
+function openSSH({ host, port, user, sshJump, sshJumpUser }) {
+  const dest = parseEndpoint(host, Number(port) || 22);
+  if (!dest.host) return { ok:false, error:'Host SSH não informado' };
+
+  const destTarget = user ? `${user}@${dest.host}` : dest.host;
+  let sshCmd = `ssh -tt -p ${dest.port} ${destTarget}`;
+
   if (sshJump) {
-    // SSH nativo: start "" ssh -t jumpUser@jumpHost "ssh -t destUser@destHost"
-    const jumpTarget = sshJumpUser ? `${sshJumpUser}@${sshJump}` : sshJump;
-    const destPort   = port || 22;
-    const nestedCmd  = `ssh -t -p ${destPort} ${user}@${host}`;
-    const bat = `@echo off\nstart "" ssh -t ${jumpTarget} "${nestedCmd}"\n`;
-    const batFile = path.join(os.tmpdir(), `cmdb_ssh_${Date.now()}.bat`);
-    fs.writeFileSync(batFile, bat, 'utf-8');
-    spawn('cmd.exe', ['/c', batFile], { detached:true, windowsHide:true });
-    setTimeout(() => { try { fs.unlinkSync(batFile); } catch {} }, 5000);
-    return { ok:true };
+    const jump = parseEndpoint(sshJump, 22);
+    if (!jump.host) return { ok:false, error:'Jump SSH inválido' };
+    const jumpTarget = sshJumpUser ? `${sshJumpUser}@${jump.host}` : jump.host;
+    sshCmd = `ssh -tt -J ${jumpTarget}:${jump.port} -p ${dest.port} ${destTarget}`;
   }
 
-  // SSH direto — abre terminal Windows com ssh
-  const target = user ? `${user}@${host}` : host;
-  const sshCmd = `ssh -p ${port||22} ${target}`;
-  // Tenta Windows Terminal primeiro, depois cmd
-  const bat = `@echo off\nwt.exe new-tab -- ${sshCmd} 2>nul || start "" cmd /k ${sshCmd}\n`;
+  const bat = [
+    '@echo off',
+    `set SSH_CMD=${sshCmd}`,
+    'where wt.exe >nul 2>&1',
+    'if %errorlevel%==0 (',
+    '  start "" wt.exe new-tab -- %SSH_CMD%',
+    ') else (',
+    '  start "" cmd.exe /k %SSH_CMD%',
+    ')',
+    ''
+  ].join('\r\n');
+
   const batFile = path.join(os.tmpdir(), `cmdb_ssh_${Date.now()}.bat`);
   fs.writeFileSync(batFile, bat, 'utf-8');
   spawn('cmd.exe', ['/c', batFile], { detached:true, windowsHide:true });
   setTimeout(() => { try { fs.unlinkSync(batFile); } catch {} }, 5000);
-  return { ok:true };
+  return { ok:true, mode: sshJump ? 'jump' : 'direct' };
 }
 
 // ════ HTTP Server ══════════════════════════════════════════════════════════

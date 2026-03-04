@@ -16,6 +16,12 @@ ensureDir(DATA_DIR);
 ensureDir(path.join(DATA_DIR, 'users'));
 ensureDir(path.join(DATA_DIR, 'sessions'));
 
+function resolveAsset(...parts) {
+  const publicPath = path.join(__dirname, 'public', ...parts);
+  if (fs.existsSync(publicPath)) return publicPath;
+  return path.join(__dirname, ...parts);
+}
+
 function readJSON(file, fallback) {
   try { if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf-8')); }
   catch {}
@@ -52,7 +58,7 @@ const SENSITIVE = ['gwuser','gwpass','sshJumpUser','sshJumpPass'];
 
 // ════ Middleware ═══════════════════════════════════════════════════════════
 app.use(express.json({ limit: '20mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(resolveAsset()));
 app.use(session({
   store: new FileStore({
     path: path.join(DATA_DIR, 'sessions'),
@@ -252,15 +258,21 @@ app.post('/api/db/save', auth, (req, res) => {
 });
 
 // ════ Agent download — serve arquivos embarcados ══════════════════════════
-const AGENT_JS = fs.readFileSync(path.join(__dirname, 'public', 'agent.js'), 'utf-8');
-const INSTALL_BAT = fs.readFileSync(path.join(__dirname, 'public', 'install.bat'), 'utf-8');
+const AGENT_JS = fs.readFileSync(resolveAsset('agent.js'), 'utf-8');
+const INSTALL_BAT_TEMPLATE = fs.readFileSync(resolveAsset('install.bat'), 'utf-8');
 
 app.get('/agent/agent.js',     (_req, res) => { res.setHeader('Content-Type','application/javascript'); res.send(AGENT_JS); });
-app.get('/agent/install.bat',  (_req, res) => { res.setHeader('Content-Type','application/octet-stream'); res.setHeader('Content-Disposition','attachment; filename="install.bat"'); res.send(INSTALL_BAT); });
-app.get('/agent/package.json', (_req, res) => { res.json({ name:'cmdb-local-agent', version:'2.0.0', main:'agent.js', dependencies:{} }); });
+app.get('/agent/install.bat',  (req, res) => {
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const installBat = INSTALL_BAT_TEMPLATE.replace('__CMDB_BASE_URL__', baseUrl);
+  res.setHeader('Content-Type','application/octet-stream');
+  res.setHeader('Content-Disposition','attachment; filename="install.bat"');
+  res.send(installBat);
+});
+app.get('/agent/package.json', (_req, res) => { res.json({ name:'cmdb-local-agent', version:'2.1.0', main:'agent.js', dependencies:{} }); });
 
 // ════ Redirect root to app ════════════════════════════════════════════════
-app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'cmdb.html')));
+app.get('/', (_req, res) => res.sendFile(resolveAsset('cmdb.html')));
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`CMDB Web listening on http://0.0.0.0:${PORT}`);
