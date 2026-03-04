@@ -251,8 +251,13 @@ app.post('/api/db/save', auth, (req, res) => {
   res.json({ ok:true });
 });
 
-// ════ Agent download ══════════════════════════════════════════════════════
-app.use('/agent', express.static(path.join(__dirname, 'agent')));
+// ════ Agent download — serve arquivos embarcados ══════════════════════════
+const AGENT_JS = fs.readFileSync(path.join(__dirname, 'public', 'agent.js'), 'utf-8');
+const INSTALL_BAT = fs.readFileSync(path.join(__dirname, 'public', 'install.bat'), 'utf-8');
+
+app.get('/agent/agent.js',     (_req, res) => { res.setHeader('Content-Type','application/javascript'); res.send(AGENT_JS); });
+app.get('/agent/install.bat',  (_req, res) => { res.setHeader('Content-Type','application/octet-stream'); res.setHeader('Content-Disposition','attachment; filename="install.bat"'); res.send(INSTALL_BAT); });
+app.get('/agent/package.json', (_req, res) => { res.json({ name:'cmdb-local-agent', version:'2.0.0', main:'agent.js', dependencies:{} }); });
 
 // ════ Redirect root to app ════════════════════════════════════════════════
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'cmdb.html')));

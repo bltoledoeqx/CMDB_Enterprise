@@ -12,9 +12,6 @@ COPY server/server.js ./
 # Frontend
 COPY public/ ./public/
 
-# Agente local (disponível para download em /agent/)
-COPY agent/ ./agent/
-
 # Volume para dados persistentes
 VOLUME ["/data"]
 
