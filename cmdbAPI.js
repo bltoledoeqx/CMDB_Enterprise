@@ -103,10 +103,16 @@ window.cmdbAPI = {
           border-radius:8px;max-width:320px;font-size:13px;
           box-shadow:0 8px 24px rgba(0,0,0,.4)
         `;
-        msg.innerHTML = `<b>Agente local necessário</b><br>${res.error}<br>
-          <a href="/agent/CMDB-Agent-Setup.bat" download style="color:white;text-decoration:underline">
-            Baixar instalador
-          </a>`;
+        msg.innerHTML = `
+          <b>CMDB Agent não encontrado</b><br>
+          <span style="font-size:12px;opacity:.9">Instale o agente local neste computador para usar RDP/SSH.</span><br><br>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <a href="/agent/install.bat" download="CMDB-Agent-Setup.bat"
+               style="color:white;text-decoration:underline;font-size:12px">
+              ⬇ Baixar CMDB-Agent-Setup.bat
+            </a>
+            <span style="font-size:11px;opacity:.8">Após baixar, execute como Administrador e recarregue a página.</span>
+          </div>`;
         document.body.appendChild(msg);
         setTimeout(() => msg.remove(), 8000);
       }
@@ -126,10 +132,16 @@ window.cmdbAPI = {
           border-radius:8px;max-width:320px;font-size:13px;
           box-shadow:0 8px 24px rgba(0,0,0,.4)
         `;
-        msg.innerHTML = `<b>Agente local necessário</b><br>${res.error}<br>
-          <a href="/agent/CMDB-Agent-Setup.bat" download style="color:white;text-decoration:underline">
-            Baixar instalador
-          </a>`;
+        msg.innerHTML = `
+          <b>CMDB Agent não encontrado</b><br>
+          <span style="font-size:12px;opacity:.9">Instale o agente local neste computador para usar RDP/SSH.</span><br><br>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <a href="/agent/install.bat" download="CMDB-Agent-Setup.bat"
+               style="color:white;text-decoration:underline;font-size:12px">
+              ⬇ Baixar CMDB-Agent-Setup.bat
+            </a>
+            <span style="font-size:11px;opacity:.8">Após baixar, execute como Administrador e recarregue a página.</span>
+          </div>`;
         document.body.appendChild(msg);
         setTimeout(() => msg.remove(), 8000);
       }
