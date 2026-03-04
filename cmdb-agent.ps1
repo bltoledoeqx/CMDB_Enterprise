@@ -11,15 +11,21 @@ $listener.Start()
 Write-Host "CMDB Agent rodando em http://127.0.0.1:$PORT" -ForegroundColor Green
 Write-Host "Minimize esta janela. Nao feche." -ForegroundColor Yellow
 
-function Send-Response($ctx, $body, $status = 200) {
+function Send-Response($ctx, $body = "", $status = 200) {
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
     $ctx.Response.StatusCode = $status
     $ctx.Response.ContentType = "application/json"
     $ctx.Response.Headers.Add("Access-Control-Allow-Origin", "*")
     $ctx.Response.Headers.Add("Access-Control-Allow-Methods", "POST, OPTIONS")
     $ctx.Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type")
-    $ctx.Response.OutputStream.Write($bytes, 0, $bytes.Length)
-    $ctx.Response.Close()
+
+    $ctx.Response.ContentLength64 = $bytes.Length
+
+    if ($bytes.Length -gt 0) {
+        $ctx.Response.OutputStream.Write($bytes, 0, $bytes.Length)
+    }
+
+    $ctx.Response.OutputStream.Close()
 }
 
 function Open-RDP($data) {
@@ -119,9 +125,9 @@ while ($listener.IsListening) {
         $url  = $req.Url.AbsolutePath
 
         if ($req.HttpMethod -eq "OPTIONS") {
-            Send-Response $ctx "{}" 204
-            continue
-        }
+			Send-Response $ctx "" 204
+			continue
+		}
 
         if ($url -eq "/health") {
             Send-Response $ctx '{"ok":true,"version":"2.0","type":"powershell"}'
