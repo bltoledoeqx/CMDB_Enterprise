@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  cmdb:
+    build: .
+    container_name: cmdb-enterprise
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - cmdb-data:/data
+    environment:
+      - PORT=3000
+      - DATA_DIR=/data
+      # Troque este secret em produção:
+      - SESSION_SECRET=mude-esta-chave-em-producao-2024
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/auth/me"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  cmdb-data:
+    driver: local
