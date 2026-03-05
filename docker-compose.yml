@@ -7,11 +7,13 @@ services:
       - "3000:3000"
     volumes:
       - cmdb-data:/data
+      - /opt/livros:/livros        # pasta de livros acessível para upload
     environment:
       - PORT=3000
       - DATA_DIR=/data
-      - SESSION_SECRET=mude-esta-chave-em-producao-2024
+      - BOOKS_DIR=/livros
       - KAVITA_URL=http://kavita:5000
+      - SESSION_SECRET=mude-esta-chave-em-producao-2024
     depends_on:
       - kavita
     healthcheck:
@@ -25,11 +27,11 @@ services:
     container_name: kavita
     restart: unless-stopped
     volumes:
-      - /data/livros:/manga        # pasta de livros no host → /manga no container
+      - /opt/livros:/manga         # mesma pasta física, path do Kavita
       - kavita-config:/kavita/config
     environment:
       - TZ=America/Sao_Paulo
-    # Porta 5000 NÃO exposta externamente — acesso só via proxy do CMDB
+      - KAVITA__BaseUrl=/biblioteca/
 
 volumes:
   cmdb-data:
