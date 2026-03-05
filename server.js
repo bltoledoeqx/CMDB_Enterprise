@@ -3,6 +3,7 @@ const session = require('express-session');
 const FileStore = require('session-file-store')(session);
 const crypto  = require('crypto');
 const fs      = require('fs');
+const { createProxyMiddleware } = require('http-proxy-middleware');
 const path    = require('path');
 
 const app      = express();
@@ -15,12 +16,6 @@ function ensureDir(p) { if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true
 ensureDir(DATA_DIR);
 ensureDir(path.join(DATA_DIR, 'users'));
 ensureDir(path.join(DATA_DIR, 'sessions'));
-
-function resolveAsset(...parts) {
-  const publicPath = path.join(__dirname, 'public', ...parts);
-  if (fs.existsSync(publicPath)) return publicPath;
-  return path.join(__dirname, ...parts);
-}
 
 function readJSON(file, fallback) {
   try { if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf-8')); }
@@ -58,7 +53,67 @@ const SENSITIVE = ['gwuser','gwpass','sshJumpUser','sshJumpPass'];
 
 // ════ Middleware ═══════════════════════════════════════════════════════════
 app.use(express.json({ limit: '20mb' }));
-app.use(express.static(resolveAsset()));
+
+// ════ Biblioteca (proxy Kavita) ═══════════════════════════════════════════
+// Proxia /biblioteca/* → Kavita container, removendo headers que bloqueiam iframe
+const KAVITA_URL = process.env.KAVITA_URL || 'http://kavita:5000';
+const kavitaProxy = createProxyMiddleware({
+  target: KAVITA_URL,
+  changeOrigin: true,
+  pathRewrite: { '^/biblioteca': '' },
+  on: {
+    proxyRes(proxyRes) {
+      // Remove headers que impediriam o iframe
+      delete proxyRes.headers['x-frame-options'];
+      delete proxyRes.headers['content-security-policy'];
+      // Corrige cookies para funcionar via proxy
+      if (proxyRes.headers['set-cookie']) {
+        proxyRes.headers['set-cookie'] = proxyRes.headers['set-cookie'].map(c =>
+          c.replace(/; SameSite=Strict/gi, '; SameSite=Lax')
+           .replace(/; Secure/gi, '')
+        );
+      }
+    },
+    error(_err, _req, res) {
+      res.status(502).send(`
+        <html><body style="font-family:sans-serif;background:#0f172a;color:#94a3b8;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:16px">
+          <div style="font-size:48px">📚</div>
+          <div style="font-size:18px;color:#f1f5f9">Biblioteca indisponível</div>
+          <div style="font-size:13px">O serviço Kavita não está respondendo.</div>
+          <div style="font-size:12px;color:#475569">Verifique se o container kavita está rodando:<br><code>docker compose ps</code></div>
+        </body></html>
+      `);
+    }
+  }
+});
+
+// Rota da biblioteca — requer autenticação no CMDB
+app.use('/biblioteca', (req, res, next) => {
+  if (!req.session?.user) return res.redirect('/?redirect=biblioteca');
+  next();
+}, kavitaProxy);
+
+// ── Segurança: bloqueia qualquer requisição externa no browser ─────────────
+app.use((_req, res, next) => {
+  // Content-Security-Policy: só permite recursos do próprio servidor
+  // e o agente local em localhost:27420
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",  // Kavita usa eval
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self' data:",
+    "img-src 'self' data: blob:",
+    "connect-src 'self' http://localhost:27420 http://127.0.0.1:27420",
+    "frame-src 'self'",                                  // permite iframe /biblioteca
+    "frame-ancestors 'none'",
+  ].join('; '));
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer'); // não vaza URL para logs externos
+  next();
+});
+
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(session({
   store: new FileStore({
     path: path.join(DATA_DIR, 'sessions'),
@@ -257,22 +312,62 @@ app.post('/api/db/save', auth, (req, res) => {
   res.json({ ok:true });
 });
 
-// ════ Agent download — serve arquivos embarcados ══════════════════════════
-const AGENT_JS = fs.readFileSync(resolveAsset('agent.js'), 'utf-8');
-const INSTALL_BAT_TEMPLATE = fs.readFileSync(resolveAsset('install.bat'), 'utf-8');
+// ════ RDP file generator ══════════════════════════════════════════════════
+// Gera o arquivo .rdp dinamicamente — o browser baixa e o Windows abre com mstsc
+app.post('/api/rdp/generate', auth, (req, res) => {
+  const { host, port, user, domain, gateway, gatewayUser } = req.body || {};
+  if (!host) return res.status(400).json({ ok:false, error:'host obrigatório' });
 
-app.get('/agent/agent.js',     (_req, res) => { res.setHeader('Content-Type','application/javascript'); res.send(AGENT_JS); });
-app.get('/agent/install.bat',  (req, res) => {
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
-  const installBat = INSTALL_BAT_TEMPLATE.replace('__CMDB_BASE_URL__', baseUrl);
-  res.setHeader('Content-Type','application/octet-stream');
-  res.setHeader('Content-Disposition','attachment; filename="install.bat"');
-  res.send(installBat);
+  const rdpHost  = (port && String(port) !== '3389') ? `${host}:${port}` : host;
+  const fullUser = domain ? `${domain}\\${user}` : (user || '');
+  const gw       = gateway || '';
+  const gwUser   = gatewayUser || user || '';
+
+  const lines = [
+    `full address:s:${rdpHost}`,
+    `username:s:${fullUser}`,
+    `prompt for credentials:i:${user ? '0' : '1'}`,
+    'administrative session:i:0',
+    'authentication level:i:2',
+    'enablecredsspsupport:i:1',
+    'negotiate security layer:i:1',
+    'autoreconnection enabled:i:1',
+    'compression:i:1',
+    'bitmapcachepersistenable:i:1',
+    'connection type:i:7',
+    'networkautodetect:i:1',
+    'bandwidthautodetect:i:1',
+  ];
+
+  if (gw) {
+    lines.push(
+      `gatewayhostname:s:${gw}`,
+      'gatewayusagemethod:i:1',
+      'gatewayprofileusagemethod:i:1',
+      'gatewaycredentialssource:i:0',
+      `gatewayusername:s:${gwUser}`,
+      'promptcredentialonce:i:1',
+    );
+  }
+
+  const content  = lines.join('\r\n') + '\r\n';
+  const filename = `${(host).replace(/[^a-zA-Z0-9._-]/g, '_')}.rdp`;
+
+  res.setHeader('Content-Type', 'application/x-rdp');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(content);
 });
-app.get('/agent/package.json', (_req, res) => { res.json({ name:'cmdb-local-agent', version:'2.1.0', main:'agent.js', dependencies:{} }); });
+
+
+const AGENT_PS1 = fs.readFileSync(path.join(__dirname, 'public', 'cmdb-agent.ps1'), 'utf-8');
+app.get('/agent/cmdb-agent.ps1', (_req, res) => {
+  res.setHeader('Content-Type', 'application/octet-stream');
+  res.setHeader('Content-Disposition', 'attachment; filename="cmdb-agent.ps1"');
+  res.send(AGENT_PS1);
+});
 
 // ════ Redirect root to app ════════════════════════════════════════════════
-app.get('/', (_req, res) => res.sendFile(resolveAsset('cmdb.html')));
+app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'cmdb.html')));
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`CMDB Web listening on http://0.0.0.0:${PORT}`);
