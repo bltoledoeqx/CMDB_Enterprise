@@ -3,7 +3,7 @@ set -e
 echo "=== CMDB Enterprise Setup ==="
 mkdir -p server public
 
-echo "[1/7] docker-compose.yml"  ; echo "c2VydmljZXM6CiAgY21kYjoKICAgIGJ1aWxkOiAuCiAgICBjb250YWluZXJfbmFtZTogY21kYi1lbnRlcnByaXNlCiAgICByZXN0YXJ0OiB1bmxlc3Mtc3RvcHBlZAogICAgcG9ydHM6CiAgICAgIC0gIjMwMDA6MzAwMCIKICAgIHZvbHVtZXM6CiAgICAgIC0gY21kYi1kYXRhOi9kYXRhCiAgICAgIC0gL29wdC9saXZyb3M6L2xpdnJvcwogICAgZW52aXJvbm1lbnQ6CiAgICAgIC0gUE9SVD0zMDAwCiAgICAgIC0gREFUQV9ESVI9L2RhdGEKICAgICAgLSBCT09LU19ESVI9L2xpdnJvcwogICAgICAtIEtBVklUQV9VUkw9aHR0cDovL2thdml0YTo1MDAwCiAgICAgIC0gU0VTU0lPTl9TRUNSRVQ9bXVkZS1lc3RhLWNoYXZlLWVtLXByb2R1Y2FvLTIwMjQKICAgIGRlcGVuZHNfb246CiAgICAgIGthdml0YToKICAgICAgICBjb25kaXRpb246IHNlcnZpY2Vfc3RhcnRlZAogICAgbmV0d29ya3M6CiAgICAgIC0gbnBtX3Byb3h5CiAgICBoZWFsdGhjaGVjazoKICAgICAgdGVzdDogWyJDTUQiLCAid2dldCIsICItcU8tIiwgImh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC9hcGkvYXV0aC9tZSJdCiAgICAgIGludGVydmFsOiAzMHMKICAgICAgdGltZW91dDogNXMKICAgICAgcmV0cmllczogMwoKICBrYXZpdGE6CiAgICBpbWFnZToganZtaWxhenowL2thdml0YTpsYXRlc3QKICAgIGNvbnRhaW5lcl9uYW1lOiBrYXZpdGEKICAgIHJlc3RhcnQ6IHVubGVzcy1zdG9wcGVkCiAgICB2b2x1bWVzOgogICAgICAtIC9vcHQvbGl2cm9zOi9tYW5nYQogICAgICAtIGthdml0YS1jb25maWc6L2thdml0YS9jb25maWcKICAgIGVudmlyb25tZW50OgogICAgICAtIFRaPUFtZXJpY2EvU2FvX1BhdWxvCiAgICAgIC0gS0FWSVRBX19CYXNlVXJsPS9iaWJsaW90ZWNhLwogICAgbmV0d29ya3M6CiAgICAgIC0gbnBtX3Byb3h5CgpuZXR3b3JrczoKICBucG1fcHJveHk6CiAgICBleHRlcm5hbDogdHJ1ZSAgICMgcmVkZSBqw6EgZXhpc3RlbnRlIGRvIE5naW54IFByb3h5IE1hbmFnZXIg4oCUIG7Do28gcmVjcmlhCgp2b2x1bWVzOgogIGNtZGItZGF0YToKICAgIGRyaXZlcjogbG9jYWwKICBrYXZpdGEtY29uZmlnOgogICAgZHJpdmVyOiBsb2NhbAo="       | base64 -d > docker-compose.yml
+echo "[1/7] docker-compose.yml"  ; echo "c2VydmljZXM6CiAgY21kYjoKICAgIGJ1aWxkOiAuCiAgICBjb250YWluZXJfbmFtZTogY21kYi1lbnRlcnByaXNlCiAgICByZXN0YXJ0OiB1bmxlc3Mtc3RvcHBlZAogICAgcG9ydHM6CiAgICAgIC0gIjMwMDA6MzAwMCIKICAgIHZvbHVtZXM6CiAgICAgIC0gY21kYi1kYXRhOi9kYXRhCiAgICAgIC0gL29wdC9saXZyb3M6L2xpdnJvcwogICAgZW52aXJvbm1lbnQ6CiAgICAgIC0gUE9SVD0zMDAwCiAgICAgIC0gREFUQV9ESVI9L2RhdGEKICAgICAgLSBCT09LU19ESVI9L2xpdnJvcwogICAgICAtIEtBVklUQV9VUkw9aHR0cDovL2thdml0YTo1MDAwCiAgICAgIC0gU0VTU0lPTl9TRUNSRVQ9bXVkZS1lc3RhLWNoYXZlLWVtLXByb2R1Y2FvLTIwMjQKICAgIGRlcGVuZHNfb246CiAgICAgIGthdml0YToKICAgICAgICBjb25kaXRpb246IHNlcnZpY2VfaGVhbHRoeQogICAgbmV0d29ya3M6CiAgICAgIC0gbnBtX3Byb3h5CiAgICBoZWFsdGhjaGVjazoKICAgICAgdGVzdDogWyJDTUQiLCAid2dldCIsICItcU8tIiwgImh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC9hcGkvYXV0aC9tZSJdCiAgICAgIGludGVydmFsOiAzMHMKICAgICAgdGltZW91dDogNXMKICAgICAgcmV0cmllczogMwoKICBrYXZpdGE6CiAgICBpbWFnZToganZtaWxhenowL2thdml0YTpsYXRlc3QKICAgIGNvbnRhaW5lcl9uYW1lOiBrYXZpdGEKICAgIHJlc3RhcnQ6IHVubGVzcy1zdG9wcGVkCiAgICB2b2x1bWVzOgogICAgICAtIC9vcHQvbGl2cm9zOi9tYW5nYQogICAgICAtIGthdml0YS1jb25maWc6L2thdml0YS9jb25maWcKICAgICAgLSAvb3B0L2thdml0YS1zZXR0aW5ncy9hcHBzZXR0aW5ncy5qc29uOi9rYXZpdGEvY29uZmlnL2FwcHNldHRpbmdzLmpzb24KICAgIG5ldHdvcmtzOgogICAgICAtIG5wbV9wcm94eQogICAgaGVhbHRoY2hlY2s6CiAgICAgIHRlc3Q6IFsiQ01EIiwgIndnZXQiLCAiLXFPLSIsICJodHRwOi8vbG9jYWxob3N0OjUwMDAvYXBpL2hlYWx0aCJdCiAgICAgIGludGVydmFsOiAxNXMKICAgICAgdGltZW91dDogNXMKICAgICAgcmV0cmllczogNQogICAgICBzdGFydF9wZXJpb2Q6IDIwcwoKbmV0d29ya3M6CiAgbnBtX3Byb3h5OgogICAgZXh0ZXJuYWw6IHRydWUKCnZvbHVtZXM6CiAgY21kYi1kYXRhOgogICAgZHJpdmVyOiBsb2NhbAogIGthdml0YS1jb25maWc6CiAgICBkcml2ZXI6IGxvY2FsCg=="       | base64 -d > docker-compose.yml
 
 echo "[2/7] Dockerfile"
 cat > Dockerfile << 'EOF'
@@ -34,12 +34,46 @@ sudo mkdir -p /opt/livros
 sudo chown $(whoami):$(whoami) /opt/livros
 
 echo ""
+echo "=== Criando configuração do Kavita (BaseUrl=/biblioteca/) ==="
+sudo mkdir -p /opt/kavita-settings
+sudo tee /opt/kavita-settings/appsettings.json > /dev/null << 'JSONEOF'
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information"
+    }
+  },
+  "AllowedHosts": "*",
+  "Kavita": {
+    "BaseUrl": "/biblioteca/",
+    "Port": 5000
+  }
+}
+JSONEOF
+sudo chmod 644 /opt/kavita-settings/appsettings.json
+echo "appsettings.json criado em /opt/kavita-settings/"
+
+echo ""
 echo "=== Parando containers antigos ==="
 docker compose down --remove-orphans
 
 echo ""
 echo "=== Subindo containers ==="
 docker compose up -d --build
+
+echo ""
+echo "=== Aguardando Kavita ficar healthy ==="
+for i in $(seq 1 12); do
+  STATUS=$(docker inspect --format='{{.State.Health.Status}}' kavita 2>/dev/null || echo "unknown")
+  echo "  [$i/12] kavita: $STATUS"
+  if [ "$STATUS" = "healthy" ]; then break; fi
+  sleep 5
+done
+
+echo ""
+docker compose ps
 
 echo ""
 IP=$(hostname -I | awk '{print $1}')
