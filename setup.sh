@@ -22,10 +22,11 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
 CMD ["node", "server.js"]
 EOF
 
-echo "[3/8] Dockerfile.kavita (Kavita com BaseUrl embutido)"
+echo "[3/8] Dockerfile.kavita"
 cat > Dockerfile.kavita << 'EOF'
 FROM jvmilazz0/kavita:latest
-RUN printf '{\n  "Logging": {\n    "LogLevel": { "Default": "Information", "Microsoft": "Warning" }\n  },\n  "AllowedHosts": "*",\n  "Kavita": {\n    "BaseUrl": "/biblioteca/",\n    "Port": 5000\n  }\n}\n' > /tmp/appsettings.json &&     cp /tmp/appsettings.json /kavita/appsettings.json
+# Descobre onde o Kavita realmente guarda o appsettings e sobrescreve
+RUN mkdir -p /kavita/config &&     printf '{\n  "Logging": { "LogLevel": { "Default": "Information", "Microsoft": "Warning" } },\n  "AllowedHosts": "*",\n  "Kavita": { "BaseUrl": "/biblioteca/", "Port": 5000 }\n}\n'     | tee /kavita/config/appsettings.json /kavita/appsettings.json > /dev/null
 EOF
 
 echo "[4/8] server/package.json"  ; echo "ewogICJuYW1lIjogImNtZGItd2ViLXNlcnZlciIsCiAgInZlcnNpb24iOiAiMi4wLjAiLAogICJkZXNjcmlwdGlvbiI6ICJDTURCIEVudGVycHJpc2UgLSBXZWIgU2VydmVyIiwKICAibWFpbiI6ICJzZXJ2ZXIuanMiLAogICJzY3JpcHRzIjogewogICAgInN0YXJ0IjogIm5vZGUgc2VydmVyLmpzIgogIH0sCiAgImRlcGVuZGVuY2llcyI6IHsKICAgICJleHByZXNzIjogIl40LjE4LjIiLAogICAgImV4cHJlc3Mtc2Vzc2lvbiI6ICJeMS4xNy4zIiwKICAgICJzZXNzaW9uLWZpbGUtc3RvcmUiOiAiXjEuNS4wIiwKICAgICJodHRwLXByb3h5LW1pZGRsZXdhcmUiOiAiXjMuMC4zIgogIH0KfQ=="  | base64 -d > server/package.json
@@ -44,20 +45,19 @@ echo "=== Parando containers antigos ==="
 docker compose down --remove-orphans
 
 echo ""
-echo "=== Build e subida dos containers ==="
+echo "=== Build e subida ==="
 docker compose up -d --build
 
 echo ""
-echo "=== Aguardando inicialização (20s) ==="
-sleep 20
+echo "=== Aguardando (25s) ==="
+sleep 25
 docker compose ps
 
 echo ""
-echo "=== Verificando BaseUrl do Kavita ==="
-docker compose logs kavita | grep -i "base url" || echo "(log ainda não disponível)"
+echo "=== BaseUrl do Kavita ==="
+docker compose logs kavita 2>&1 | grep -i "base url"
 
-echo ""
 IP=$(hostname -I | awk '{print $1}')
+echo ""
 echo "=== Pronto! ==="
-echo "CMDB:       http://${IP}:3000"
-echo "Biblioteca: aba Biblioteca no CMDB"
+echo "CMDB: http://${IP}:3000"
